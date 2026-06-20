@@ -89,8 +89,10 @@ Open `http://localhost:8501` in your browser.
 
 ```
 ├── README.md               ← this file
-├── implementation_plan.md  ← architecture, workflow, cost model, production path
-├── roadmap.md              ← POC-to-production transition plan, MCP migration, cost projection
+├── implementation_plan.md  ← workflow design, state, tools, cost model
+├── architecture.md         ← C4 diagrams, LangGraph flowchart, ADRs, tradeoffs
+├── roadmap.md              ← POC-to-production phases, MCP migration, cost projection
+├── CONTRIBUTING.md         ← how to contribute, code conventions, PR guidelines
 ├── CLAUDE.md               ← guidance for Claude Code
 ├── requirements.txt
 ├── seed_db.py              ← creates and seeds patients.db
