@@ -9,6 +9,8 @@ Screens:
 Run:  streamlit run app.py
 """
 
+from __future__ import annotations
+
 import sqlite3
 import uuid
 from datetime import datetime
