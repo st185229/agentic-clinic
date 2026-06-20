@@ -10,14 +10,24 @@ See [`implementation_plan.md`](implementation_plan.md) for the full architectura
 ## How It Works
 
 ```
-Patient → AI Intake Agent → [Doctor Reviews] → AI Prescription Agent → Patient
+Patient → AI Intake Agent → [Emergency?] → Emergency alert (999/911)
+                          ↓ (normal)
+                     Doctor Queue  ← triage-sorted by severity score
+                          ↓ interrupt()
+                     Doctor Reviews
+                          ↓ (clarification needed?)
+                     Patient answers doctor's question → back to doctor
+                          ↓ (diagnosis submitted)
+                     AI Prescription Agent → checks pharmacy stock → Patient
 ```
 
-1. Patient opens the app, describes symptoms via chat
-2. The intake agent fetches patient history from the database and produces a structured summary
-3. The graph pauses (`interrupt()`) and queues the case on the doctor's desktop
-4. The doctor reviews, types a diagnosis (or logs an out-of-band call), and submits
-5. The prescription agent generates and records the prescription; the patient sees it in chat
+1. Patient describes symptoms; the intake agent fetches their medical history and assigns a **triage score (1–5)**
+2. If symptoms indicate an emergency, the patient sees an immediate red-banner alert — no queue
+3. Otherwise, the case joins the **doctor's prioritised queue**, sorted by severity then wait time
+4. The graph pauses (`interrupt()`); the doctor reviews the AI-generated intake summary
+5. The doctor can submit a diagnosis **or** send a clarifying question back to the patient
+6. The prescription agent checks **pharmacy inventory** before finalising — suggests alternatives if out of stock
+7. The patient sees the prescription in their chat window
 
 ---
 
@@ -55,7 +65,7 @@ In the [AWS Bedrock console](https://console.aws.amazon.com/bedrock/) → **Mode
 python seed_db.py
 ```
 
-Creates `patients.db` with dummy patients, medical history, and knowledge base entries.
+Creates `patients.db` with dummy patients, medical history, knowledge base, and pharmacy inventory (Amoxicillin seeded as out-of-stock to demo the substitution flow).
 
 ---
 
@@ -70,7 +80,7 @@ Open `http://localhost:8501` in your browser.
 **Screens:**
 - **Login** — select role (Patient / Doctor) and enter a dummy PIN
 - **Patient view** — chat with the intake agent, see status updates, receive prescription
-- **Doctor desktop** — alert queue of pending consultations, intake summaries, diagnosis submission
+- **Doctor desktop** — triage-sorted alert queue (🔴🟡🟢), intake summaries with triage reasoning, diagnosis or clarification actions
 
 ---
 
@@ -82,7 +92,7 @@ Open `http://localhost:8501` in your browser.
 ├── CLAUDE.md               ← guidance for Claude Code
 ├── requirements.txt
 ├── seed_db.py              ← creates and seeds patients.db
-├── tools.py                ← LangChain @tool wrappers (patient record, history, KB, Rx)
+├── tools.py                ← LangChain @tool wrappers (patient record, history, KB, pharmacy check, Rx)
 ├── graph.py                ← LangGraph workflow (nodes, edges, interrupt, checkpointing)
 ├── app.py                  ← Streamlit frontend (login, patient chat, doctor desktop)
 ```
