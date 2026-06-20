@@ -17,7 +17,7 @@ The single most significant architectural transition is **Phase 2: the move from
 |---------|---------------|------------|
 | LLM | Claude Haiku 4.5 via Bedrock (`us.anthropic.claude-haiku-4-5-20251001-v1:0`) | ✅ Production-ready as-is |
 | Orchestration | LangGraph + `interrupt()` | ✅ Production-ready as-is |
-| Checkpointing | SQLite (`checkpoints.db`) | Local only, single process |
+| Checkpointing | `MemorySaver` (in-process) | Lost on restart, single process only |
 | Patient data | SQLite (`patients.db`) | Local only, no access control |
 | Tool access | LangChain `@tool` wrappers (Python functions) | Tightly coupled, no security boundary |
 | Auth | Hardcoded PIN | Placeholder only |
@@ -48,7 +48,7 @@ A multi-tenant, HIPAA-eligible consultation platform where:
 **What changes:**
 - Deploy Streamlit on a single small instance (AWS EC2 `t3.micro` or App Runner)
 - Move `patients.db` to **Amazon RDS** (PostgreSQL, `db.t3.micro` — ~$15/month)
-- Move `checkpoints.db` to **`langgraph-checkpoint-aws`** (DynamoDB on-demand — pay per request)
+- Move checkpointing from `MemorySaver` to **`langgraph-checkpoint-aws`** (DynamoDB on-demand — pay per request)
 - Add a `.env` file pattern and AWS Secrets Manager reference for credentials
 
 **What stays the same:**

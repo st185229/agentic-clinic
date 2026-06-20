@@ -42,7 +42,7 @@ LangGraph models the workflow as a **directed graph** where nodes are agents or 
 │  LangChain AWS  (langchain-aws)                 │  Integration
 │  ChatBedrock · @tool wrappers                   │  (model wrappers, tool schemas)
 ├─────────────────────────────────────────────────┤
-│  AWS Bedrock  (claude-3-haiku)                  │  Intelligence
+│  AWS Bedrock  (claude-haiku-4-5)                 │  Intelligence
 │  Foundation model · pay-per-token               │  (reasoning, generation)
 └─────────────────────────────────────────────────┘
 ```
@@ -93,7 +93,7 @@ START
 
 ### Human-in-the-Loop Detail
 
-LangGraph's `interrupt()` function pauses graph execution at `doctor_review` and serialises the current state to a checkpoint store (SQLite). The doctor's Streamlit view polls for pending consultations. When the doctor submits, the graph is resumed via `graph.invoke(Command(resume=doctor_notes), config)` — no webhooks, no queues, no custom state management needed.
+LangGraph's `interrupt()` function pauses graph execution at `doctor_review` and serialises the current state to the checkpoint store (`MemorySaver` in POC, DynamoDB in production). The doctor's Streamlit view polls for pending consultations. When the doctor submits, the graph is resumed via `graph.invoke(Command(resume=doctor_notes), config)` — no webhooks, no queues, no custom state management needed.
 
 ---
 
@@ -214,9 +214,9 @@ Three screens, role-selected at login:
 
 | Concern | POC Choice | Why | Production Path |
 |---------|-----------|-----|-----------------|
-| LLM | Claude 3 Haiku (Bedrock) | Cheapest capable model; ~$0.001/consultation | Same; upgrade to Sonnet for complex reasoning if needed |
+| LLM | Claude Haiku 4.5 (Bedrock, `us.` inference profile) | Cheapest capable model; ~$0.001/consultation | Same; upgrade to Sonnet 4 for complex reasoning if needed |
 | Orchestration | LangGraph `interrupt()` | Native human-in-the-loop | Same |
-| Checkpointing | `SqliteSaver` | Free, zero infra | `langgraph-checkpoint-aws` (DynamoDB) |
+| Checkpointing | `MemorySaver` | Zero config; shared across tabs via `@st.cache_resource` | `langgraph-checkpoint-aws` (DynamoDB) |
 | Database | SQLite | Zero cost, zero infra | RDS / DynamoDB on-demand |
 | Tool access | LangChain `@tool` | Fast to build | MCP servers + Cedar policies |
 | Frontend | Streamlit | No JS, Python-native | React or Next.js |
@@ -230,7 +230,7 @@ Three screens, role-selected at login:
 
 | Item | POC | Production (50 consults/day) |
 |------|-----|------------------------------|
-| Claude 3 Haiku | ~$0.001/consult | ~$1.50/month |
+| Claude Haiku 4.5 | ~$0.001/consult | ~$1.50/month |
 | SQLite / DynamoDB | $0 | ~$1–2/month (on-demand) |
 | Streamlit / Fargate | $0 (local) | ~$10–15/month (t3.micro) |
 | S3 (state offload) | $0 | ~$0.50/month |
@@ -250,18 +250,16 @@ bedrocks-with-lang/
 ├── requirements.txt
 ├── seed_db.py              ← creates patients.db with dummy data
 ├── tools.py                ← @tool functions: patient record, history, KB, prescription
-├── graph.py                ← LangGraph StateGraph: nodes, edges, interrupt, SqliteSaver
+├── graph.py                ← LangGraph StateGraph: nodes, edges, interrupt, MemorySaver
 └── app.py                  ← Streamlit: login, patient chat, doctor desktop
 ```
-
-`mvp.py` is retained as a reference for the original Draft & Review loop pattern.
 
 ---
 
 ## 12. Production Path (Beyond POC)
 
 1. **Auth**: Replace dummy login with Amazon Cognito user pools (separate patient and doctor pools)
-2. **Checkpointing**: Swap `SqliteSaver` for `langgraph-checkpoint-aws` (DynamoDB-backed)
+2. **Checkpointing**: Swap `MemorySaver` for `langgraph-checkpoint-aws` (DynamoDB-backed)
 3. **Database**: Migrate SQLite to RDS (HIPAA-eligible with encryption at rest)
 4. **Tools → MCP**: Replace `@tool` wrappers with MCP server processes; add Cedar access policies
 5. **Notifications**: Replace Streamlit polling with SNS push → doctor mobile app
